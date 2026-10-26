@@ -1,0 +1,157 @@
+import time
+import os
+from pymodbus.client import ModbusSerialClient
+from pymodbus.exceptions import ModbusIOException
+
+SERIAL_PORT = '/dev/ttyUSB0'
+SLAVE_ID = 0x01
+TARGET_TEMP = 20.0       # Целевая температура в комнате
+HYSTERESIS_LOW = 5.0         # Гистерезис
+HYSTERESIS_UP = 1.0
+SETPOINT_FLOW = 60.0     # Температура воды (уставка для котла)
+
+def set_heating(client, enabled: bool):
+    try:
+        rr = client.read_holding_registers(address=0x0039, count=1, device_id=SLAVE_ID)
+        if rr.isError(): return False
+
+        current = rr.registers[0]
+        new_val = (current | 0x0001) if enabled else (current & 0xFFFE)
+
+        if new_val != current:
+            # ВАЖНО: используем write_registers и передаем список [new_val]
+            wr = client.write_registers(address=0x0039, values=[new_val], device_id=SLAVE_ID)
+            if wr.isError():
+                print(f"❌ Ошибка записи 0x0039: {wr}")
+                return False
+            print(f"✅ Запись 0x0039 успешна: {new_val}")
+        return True
+    except ModbusIOException:
+        print("⚠️ Таймаут при записи 0x0039")
+        return False
+
+def set_flow_temp(client, temp_c):
+    try:
+        # Исправлено: write_registers и передача в списке
+        wr = client.write_registers(address=0x0031, values=[int(temp_c * 10)], device_id=SLAVE_ID)
+        if wr.isError():
+            print(f"❌ Ошибка записи уставки 0x0031: {wr}")
+    except ModbusIOException:
+        print("⚠️ Таймаут при записи 0x0031")
+
+# --- Основной цикл ---
+client = ModbusSerialClient(port=SERIAL_PORT, baudrate=19200, parity='N', stopbits=1, bytesize=8, timeout=1)
+
+if not client.connect():
+    print("❌ Нет связи с USB-RS485")
+    exit(1)
+
+print(f"✅ Связь есть. Целевая температура: {TARGET_TEMP}°C. Ждём данные...")
+heating_on = None
+
+try:
+    while True:
+        room_temp = read_ds18b20()
+
+        try:
+            # Читаем данные
+            rr = client.read_holding_registers(address=0x0010, count=16, device_id=SLAVE_ID)
+
+            if not rr.isError():
+                reg = rr.registers
+
+                # В дампе 0x0010 было 0x0800 (2048). Убираем проверку бита,
+                # так как данные реально идут (мы видим температуру подачи).
+                # Считаем, что связь есть, если чтение не вернуло ошибку.
+
+                flow_temp = reg[8] / 10.0
+                modulation = reg[12]
+                burner = reg[13] & 0x01
+
+                if room_temp is not None:
+                    print(f"🏠 В комнате: {room_temp:.1f}°C | 🔥 Подача: {flow_temp:.1f}°C | Горелка: {'ВКЛ' if burner else 'ВЫКЛ'} | Мод: {modulation}%")
+
+                    if room_temp < TARGET_TEMP - HYSTERESIS_LOW and heating_on != True:
+                        print("🥶 Холодно! Включаем отопление.")
+                        if set_heating(client, True):
+                            time.sleep(0.5) # Пауза между командами
+                            set_flow_temp(client, SETPOINT_FLOW)
+                            heating_on = True
+
+                    elif room_temp > TARGET_TEMP + HYSTERESIS_UP and heating_on != False:
+                        print("🥵 Тепло! Выключаем отопление.")
+                        if set_heating(client, False):
+                            heating_on = False
+
+        except ModbusIOException:
+            print("⚠️ Пропуск цикла: таймаут связи с адаптером")
+
+        time.sleep(5)
+
+except KeyboardInterrupt:
+    print("\nОстановлено. Выключаем отопление...")
+    set_heating(client, False)
+    print("Готово.")
+finally:
+    client.close()
+
+
+
+class Moguchi:
+    def __init__(self):
+        self.m_temperature = None
+        self.m_work = True
+        self.m_temperature_file_path = '/sys/bus/w1/devices/28-00000021a8d4/w1_slave'
+        self.err_temp_flag = False
+        self.err_controller_flag = False
+        self.controller = ModbusSerialClient(port=SERIAL_PORT, baudrate=19200, parity='N', stopbits=1, bytesize=8, timeout=1)
+
+        self.flow_temperature = None
+        self.burner_modulation = None
+        self.burner_state = None
+
+        if not self.controller.connect():
+            print('Can\'t connect to the boiler!')
+            self.err_controller_flag = True
+        else:
+            print('The boiler is alive!')
+            self.err_controller_flag = False
+
+    def read_temperature(self):
+        if os.path.exists(self.m_temperature_file_path):
+            with open(self.m_temperature_file_path, 'r') as file:
+                r = file.read()
+                self.m_temperature = int(r.split('t=')[1]) / 1000
+            
+            self.err_temp_flag = False
+        else:
+            if not self.err_temp_flag:
+                print(f'Can\'t read temperature. File {self.m_temperature_file_path} doesn\'t exist!')
+                self.err_temp_flag = True
+
+
+    def work(self):
+        if self.err_controller_flag == True:
+            while self.m_work == True:
+                self.read_temperature()
+
+                rs485_data = client.read_holding_registers(address=0x0010, count=16, device_id=SLAVE_ID)
+
+                if not rs485_data.isError():
+                    boiler_regs = rs485_data.registers
+                    self.flow_temperature = boiler_regs[8] / 10.0
+                    self.burner_modulation = boiler_regs[12]
+                    self.burner_state = boiler_regs[13] & 0x01
+
+                time.sleep(1)
+
+    def get_temperature(self):
+        if self.err_flag:
+            print(f'Can\'t read temperature. File {self.m_temperature_file_path} doesn\'t exist!')
+        return self.m_temperature
+
+def main():
+    print("You have to run the Django server from manage.py.")
+
+if __name__ == "__main__":
+    main()
