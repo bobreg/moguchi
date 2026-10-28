@@ -6,26 +6,27 @@ import signal
 
 from django.contrib import admin
 from django.urls import path
-from .views import MoguchiServer
+from .views import m_moguchi_controller
+from .views import index
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('', MoguchiServer.index, name='index')
+    path('', index, name='index')
 ]
 
 def stop_controller_poll(signum, frame):
     print("Server shutdown!")
 
-    MoguchiServer.m_moguchi_controller.m_work = False
+    m_moguchi_controller.m_work = False
 
-    time.sleep(2) 
+    if thread and thread.is_alive():
+        thread.join(timeout=3)
     
     sys.exit(0)
+    
+signal.signal(signal.SIGINT, stop_controller_poll)   # Handles Ctrl+C
+signal.signal(signal.SIGTERM, stop_controller_poll)  # Handles Linux systemctl stop
 
-if os.environ.get('RUN_MAIN') == 'true' or not os.environ.get('DJANGO_SETTINGS_MODULE'):    
-    signal.signal(signal.SIGINT, stop_controller_poll)   # Handles Ctrl+C
-    signal.signal(signal.SIGTERM, stop_controller_poll)  # Handles Linux systemctl stop
-
-    # 2. Fire the thread
-    thread = threading.Thread(target=MoguchiServer.m_moguchi_controller.work, daemon=True)
-    thread.start()
+# 2. Fire the thread
+thread = threading.Thread(target=m_moguchi_controller.work, daemon=True)
+thread.start()

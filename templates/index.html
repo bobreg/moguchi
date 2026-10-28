@@ -6,7 +6,38 @@
         <title>Moguchi Control</title>
     </head>
     <body>
-        <h1>Hello, World!</h1>
-        <p>Temperature = {{t_temperature}}</p>
+        <h1>Moguchi Boiler Control</h1>
+        <table>
+            <tr>
+                <td>
+                    Boiler connection:
+                </td>
+                <td>
+                    {{boiler_connection}}
+                </td>
+                <td>
+                    Temperature sensor:
+                </td>
+                <td>
+                    {{temp_sensor}}
+                </td>
+            </tr>
+        </table>
+
+        <p>Temperature = {{temperature}}</p>
+        <p>Flow temperature = {{flow_temperature}}</p>
+        <p>Burner modulation = {{burner_modulation}}</p>
+        <p>Burner state = {{burner_state}}</p>
+        <p>--------------------------------------------------</p>
+        <table>
+            <tr>
+                <td>
+                    <button>Connect to Boiler</button>
+                </td>
+                <td>
+                    <button>Set Temperature</button>
+                </td>
+            </tr>
+        </table>
     </body>
 </html>

@@ -1,5 +1,7 @@
 import time
 import os
+from structs import MoguchiData
+import copy
 from pymodbus.client import ModbusSerialClient
 from pymodbus.exceptions import ModbusIOException
 
@@ -9,7 +11,9 @@ TARGET_TEMP = 20.0       # Целевая температура в комнат
 HYSTERESIS_LOW = 5.0         # Гистерезис
 HYSTERESIS_UP = 1.0
 SETPOINT_FLOW = 60.0     # Температура воды (уставка для котла)
+TEMPERATURE_FILE_PATH = '/sys/bus/w1/devices/28-00000021a8d4/w1_slave'
 
+'''
 def set_heating(client, enabled: bool):
     try:
         rr = client.read_holding_registers(address=0x0039, count=1, device_id=SLAVE_ID)
@@ -94,61 +98,78 @@ except KeyboardInterrupt:
     print("Готово.")
 finally:
     client.close()
-
+'''
 
 
 class Moguchi:
     def __init__(self):
         self.m_temperature = None
         self.m_work = True
-        self.m_temperature_file_path = '/sys/bus/w1/devices/28-00000021a8d4/w1_slave'
-        self.err_temp_flag = False
-        self.err_controller_flag = False
+        self.m_temperature_file_path = TEMPERATURE_FILE_PATH
         self.controller = ModbusSerialClient(port=SERIAL_PORT, baudrate=19200, parity='N', stopbits=1, bytesize=8, timeout=1)
 
-        self.flow_temperature = None
-        self.burner_modulation = None
-        self.burner_state = None
+        self.boiler_connect_flag = True
+        
+        self.moguchi_data = None
 
-        if not self.controller.connect():
-            print('Can\'t connect to the boiler!')
-            self.err_controller_flag = True
-        else:
-            print('The boiler is alive!')
-            self.err_controller_flag = False
+        self.connect_to_boiler()
+        
+
+    def connect_to_boiler(self):
+        if self.boiler_connect_flag == False:
+            if self.controller.connect():
+                print('The boiler is alive')
+                self.boiler_connect_flag = True
+            else:
+                print('There is no boiler')
 
     def read_temperature(self):
+        temperature = None
         if os.path.exists(self.m_temperature_file_path):
             with open(self.m_temperature_file_path, 'r') as file:
                 r = file.read()
-                self.m_temperature = int(r.split('t=')[1]) / 1000
-            
-            self.err_temp_flag = False
-        else:
-            if not self.err_temp_flag:
-                print(f'Can\'t read temperature. File {self.m_temperature_file_path} doesn\'t exist!')
-                self.err_temp_flag = True
+                temperature = int(r.split('t=')[1]) / 1000
+        return temperature
+
+
+    def read_boiler_data(self):
+        m_data = None
+        try:
+            rs485_data = self.controller.read_holding_registers(address=0x0010, count=16, device_id=SLAVE_ID)
+
+            if not rs485_data.isError():
+                m_data = MoguchiData(0, 0, False)
+                boiler_regs = rs485_data.registers
+                m_data.flow_temperature = boiler_regs[8] / 10.0
+                m_data.burner_modulation = boiler_regs[12]
+                m_data.burner_state = (boiler_regs[13] & 0x01 == 1)
+        except:
+            pass
+
+        return copy.copy(m_data)
 
 
     def work(self):
-        if self.err_controller_flag == True:
+        if self.boiler_connect_flag == True:
             while self.m_work == True:
-                self.read_temperature()
-
-                rs485_data = client.read_holding_registers(address=0x0010, count=16, device_id=SLAVE_ID)
-
-                if not rs485_data.isError():
-                    boiler_regs = rs485_data.registers
-                    self.flow_temperature = boiler_regs[8] / 10.0
-                    self.burner_modulation = boiler_regs[12]
-                    self.burner_state = boiler_regs[13] & 0x01
+                self.m_temperature = self.read_temperature()
+                self.moguchi_data = self.read_boiler_data()
 
                 time.sleep(1)
 
-    def get_temperature(self):
-        if self.err_flag:
-            print(f'Can\'t read temperature. File {self.m_temperature_file_path} doesn\'t exist!')
-        return self.m_temperature
+        print("Work thread stop!")
+
+
+    def get_data(self):
+        contex = {
+            'temperature': self.m_temperature,
+            'flow_temperature': self.moguchi_data.flow_temperature if self.moguchi_data != None else None,
+            'burner_modulation': self.moguchi_data.burner_modulation if self.moguchi_data != None else None,
+            'burner_state': self.moguchi_data.burner_state if self.moguchi_data != None else None,
+            'boiler_connection': True if self.moguchi_data != None else False,
+            'temp_sensor': True if self.m_temperature != None else False
+                }
+        return contex
 
 def main():
     print("You have to run the Django server from manage.py.")
