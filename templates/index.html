@@ -10,16 +10,34 @@
         <table>
             <tr>
                 <td>
-                    Boiler connection:
+                    Controller:
+                </td>
+                <td>
+                    {{controller_connection}}
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    Boiler_connection:
                 </td>
                 <td>
                     {{boiler_connection}}
                 </td>
+            </tr>
+            <tr>
                 <td>
-                    Temperature sensor:
+                    Boiler operation:
                 </td>
                 <td>
-                    {{temp_sensor}}
+                    {{boiler_operation}}
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    Warm house:
+                </td>
+                <td>
+                    {{warm_house}}
                 </td>
             </tr>
         </table>
@@ -27,7 +45,12 @@
         <p>Temperature = {{temperature}}</p>
         <p>Flow temperature = {{flow_temperature}}</p>
         <p>Burner modulation = {{burner_modulation}}</p>
+        <p>--------------------------------------------------</p>
+        <!--    <p>Target flow temperatire = {{target_flow_temperature}}</p> -->
         <p>Burner state = {{burner_state}}</p>
+        <p>Heating circuit state = {{heating_circuit_state}}</p>
+        <p>Water circuit state = {{water_circuit_state}}</p>
+
         <p>--------------------------------------------------</p>
         <table>
             <tr>
