@@ -8,10 +8,12 @@ from django.contrib import admin
 from django.urls import path
 from .views import m_moguchi_controller
 from .views import index
+from .views import get_boiler_data
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('', index, name='index')
+    path('', index, name='index'),
+    path('get-boiler-data/', get_boiler_data, name='get_boiler_data'),
 ]
 
 def stop_controller_poll(signum, frame):

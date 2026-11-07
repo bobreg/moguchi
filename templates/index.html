@@ -43,14 +43,13 @@
             </tr>
         </table>
 
-        <p>Temperature = {{temperature}}</p>
-        <p>Flow temperature = {{flow_temperature}}</p>
-        <p>Burner modulation = {{burner_modulation}}</p>
+        <p>Temperature = <span id="flow_temperature_id">{{temperature}}</span></p>
+        <p>Flow temperature = <span id="flow_temperature_id">{{flow_temperature}}</span></p>
+        <p>Burner modulation = <span id="burner_modulation_id">{{burner_modulation}}</span></p>
         <p>--------------------------------------------------</p>
-        <!--    <p>Target flow temperatire = {{target_flow_temperature}}</p> -->
-        <p>Burner state = {{burner_state}}</p>
-        <p>Heating circuit state = {{heating_circuit_state}}</p>
-        <p>Water circuit state = {{water_circuit_state}}</p>
+        <p>Burner state = <span id="burner_state_id">{{burner_state}}</span></p>
+        <p>Heating circuit state = <span id="heating_circuit_state_id">{{heating_circuit_state}}</span></p>
+        <p>Water circuit state = <span id="water_circuit_state_id">{{water_circuit_state}}</span></p>
 
         <p>--------------------------------------------------</p>
         <table>
@@ -64,8 +63,8 @@
             </tr>
         </table>
 
-        <script src="{% static 'jquery.mini.js' %}"></script>
-        <script src="{% static 'scripts.js' %}"></script>
+        <script src="{% static 'jquery.js' %}"></script>
+        <script src="{% static 'scripts.js' %}?v=1.1"></script>
 
     </body>
 </html>
