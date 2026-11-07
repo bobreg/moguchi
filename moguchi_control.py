@@ -116,7 +116,7 @@ class Moguchi:
         self.controller = ModbusSerialClient(port=SERIAL_PORT, baudrate=19200, parity='N', stopbits=1, bytesize=8, timeout=1)
 
         self.m_controller_connect_flag = False
-        self.m_boiler_operation_flag = False
+        self.m_boiler_acceped_command_flag = False
         self.m_warm_house_flag = False
         
         self.m_moguchi_data = None
@@ -149,7 +149,7 @@ class Moguchi:
             if not rs485_data.isError():
                 boiler_regs = rs485_data.registers
                 if (boiler_regs[0] >> 8) | 0x1000:  # the boiler is alive
-                    m_data = MoguchiData(0, 0, False)
+                    m_data = MoguchiData()
                     m_data.flow_temperature = boiler_regs[8] / 10.0
                     m_data.burner_modulation = boiler_regs[12]
                     m_data.burner_state = (boiler_regs[13] & 0x1 == 1)
@@ -191,19 +191,23 @@ class Moguchi:
 
 
     def warm_house(self):
-        if self.m_moguchi_data != None and self.m_temperature != None:  # globally check connection            
-            if self.m_temperature < TARGET_TEMP - HYSTERESIS_LOW and \
-                not self.m_warm_house_flag:  # enable heat
-                print('Enable house warm')
-                self.m_boiler_operation_flag = self.enable_heat(True)
-                if self.m_boiler_operation_flag:
-                    self.m_warm_house_flag = True
-            elif self.m_temperature > TARGET_TEMP + HYSTERESIS_UP and \
-                self.m_warm_house_flag:  # disable heat
-                print('Disable house warm')
-                self.m_boiler_operation_flag = self.enable_heat(False)
-                if self.m_boiler_operation_flag:
-                    self.m_warm_house_flag = False
+        if self.m_moguchi_data != None and self.m_temperature != None:  # globally check connection  
+
+            if not self.m_moguchi_data.water_circuit_state:             # check using water          
+                if self.m_temperature < TARGET_TEMP - HYSTERESIS_LOW and \
+                    not self.m_warm_house_flag:  # enable heat
+                    print('Enable house warm')
+                    self.m_boiler_acceped_command_flag = self.enable_heat(True)
+                    if self.m_boiler_acceped_command_flag:
+                        self.m_warm_house_flag = True
+                elif self.m_temperature > TARGET_TEMP + HYSTERESIS_UP and \
+                    self.m_warm_house_flag:  # disable heat
+                    print('Disable house warm')
+                    self.m_boiler_acceped_command_flag = self.enable_heat(False)
+                    if self.m_boiler_acceped_command_flag:
+                        self.m_warm_house_flag = False
+            else:
+                self.m_warm_house_flag = False
 
 
     def work(self):
@@ -212,8 +216,7 @@ class Moguchi:
                 self.m_temperature = self.read_temperature()
                 self.m_moguchi_data = self.read_boiler_data()
 
-                if not self.m_moguchi_data.water_circuit_state:
-                    self.warm_house()
+                self.warm_house()
 
                 time.sleep(1)
 
@@ -229,12 +232,12 @@ class Moguchi:
             'burner_state': self.m_moguchi_data.burner_state if self.m_moguchi_data != None else None,
             'controller_connection': self.m_controller_connect_flag,
             'boiler_connection': True if self.m_moguchi_data != None else False,
-            'boiler_operation': self.m_boiler_operation_flag,
+            'boiler_accepted_command': self.m_boiler_acceped_command_flag,
             'temp_sensor': True if self.m_temperature != None else False,
             'warm_house': self.m_warm_house_flag,
             'target_flow_temperature': SETPOINT_FLOW,
-            'heating_circuit_state': self.m_moguchi_data.heating_circuit_state,
-            'water_circuit_state': self.m_moguchi_data.water_circuit_state
+            'heating_circuit_state': self.m_moguchi_data.heating_circuit_state if self.m_moguchi_data != None else None,
+            'water_circuit_state': self.m_moguchi_data.water_circuit_state if self.m_moguchi_data != None else None
                 }
         return contex
 
