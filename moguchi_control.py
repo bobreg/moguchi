@@ -145,9 +145,8 @@ class Moguchi:
         m_data = None
         try:
             rs485_data = self.controller.read_holding_registers(address=0x0010, count=16, device_id=SLAVE_ID)
-
             if not rs485_data.isError():
-                boiler_regs = rs485_data.registers
+                boiler_regs = copy.copy(rs485_data.registers)
                 if (boiler_regs[0] >> 8) | 0x1000:  # the boiler is alive
                     m_data = MoguchiData()
                     m_data.flow_temperature = boiler_regs[8] / 10.0

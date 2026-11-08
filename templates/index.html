@@ -14,7 +14,7 @@
                     Controller:
                 </td>
                 <td>
-                    {{controller_connection}}
+                    <span id="controller_connection_id">{{controller_connection}}</span>
                 </td>
             </tr>
             <tr>
@@ -22,7 +22,7 @@
                     Boiler_connection:
                 </td>
                 <td>
-                    {{boiler_connection}}
+                    <span id="boiler_connection_id">{{boiler_connection}}</span>
                 </td>
             </tr>
             <tr>
@@ -30,7 +30,7 @@
                     Boiler operation:
                 </td>
                 <td>
-                    {{boiler_accepted_command}}
+                    <span id="boiler_accepted_command_id">{{boiler_accepted_command}}</span>
                 </td>
             </tr>
             <tr>
@@ -38,12 +38,12 @@
                     Warm house:
                 </td>
                 <td>
-                    {{warm_house}}
+                    <span id="warm_house_id">{{warm_house}}</span>
                 </td>
             </tr>
         </table>
 
-        <p>Temperature = <span id="flow_temperature_id">{{temperature}}</span></p>
+        <p>Temperature = <span id="temperature_id">{{temperature}}</span></p>
         <p>Flow temperature = <span id="flow_temperature_id">{{flow_temperature}}</span></p>
         <p>Burner modulation = <span id="burner_modulation_id">{{burner_modulation}}</span></p>
         <p>--------------------------------------------------</p>
