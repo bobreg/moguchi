@@ -16,9 +16,10 @@ TEMPERATURE_FILE_PATH = '/sys/bus/w1/devices/28-00000021a8d4/w1_slave'
 ENABLE_WARM_HEATERS = 1 << 0
 ENABLE_WARM_WATER   = 1 << 1
 
-BURNER_STATE = 1 << 0
-HEATING_CIRCUIT_STATE = 1 << 0
-WATER_CIRCUIT_STATE = 1 << 0
+BURNER_STATE          = 1 << 0
+HEATING_CIRCUIT_STATE = 1 << 1
+WATER_CIRCUIT_STATE   = 1 << 2
+BOILER_STATE          = 1 << 3
 
 '''
 def set_heating(client, enabled: bool):
@@ -135,9 +136,12 @@ class Moguchi:
     def read_temperature(self):
         temperature = None
         if os.path.exists(self.m_temperature_file_path):
-            with open(self.m_temperature_file_path, 'r') as file:
-                r = file.read()
-                temperature = int(r.split('t=')[1]) / 1000
+            try:
+                with open(self.m_temperature_file_path, 'r') as file:
+                    r = file.read()
+                    temperature = int(r.split('t=')[1]) / 1000
+            except Exception as e:
+                print(f'Can\'t read temperature sensor - {e}')
         return temperature
 
 
@@ -146,16 +150,14 @@ class Moguchi:
         try:
             rs485_data = self.controller.read_holding_registers(address=0x0010, count=16, device_id=SLAVE_ID)
             if not rs485_data.isError():
-                boiler_regs = copy.copy(rs485_data.registers)
-                if (boiler_regs[0] >> 8) | 0x1000:  # the boiler is alive
+                boiler_regs = rs485_data.registers
+                if (boiler_regs[0] >> 8) & BOILER_STATE:  # the boiler is alive
                     m_data = MoguchiData()
                     m_data.flow_temperature = boiler_regs[8] / 10.0
                     m_data.burner_modulation = boiler_regs[12]
-                    m_data.burner_state = (boiler_regs[13] & 0x1 == 1)
-                    m_data.heating_circuit_state = True if boiler_regs[13] & 0x10 else False
-                    m_data.water_circuit_state = True if boiler_regs[13] & 0x100 else False
-                else:
-                    print(hex(boiler_regs[0]))
+                    m_data.burner_state = (boiler_regs[13] & HEATING_CIRCUIT_STATE) == True
+                    m_data.heating_circuit_state = (boiler_regs[13] & HEATING_CIRCUIT_STATE) == True
+                    m_data.water_circuit_state = (boiler_regs[13] & WATER_CIRCUIT_STATE) == True
         except:
             pass
 
@@ -212,11 +214,12 @@ class Moguchi:
     def work(self):
         if self.m_controller_connect_flag == True:
             while self.m_work == True:
-                self.m_temperature = self.read_temperature()
-                self.m_moguchi_data = self.read_boiler_data()
-
-                self.warm_house()
-
+                try:
+                    self.m_temperature = self.read_temperature()
+                    self.m_moguchi_data = self.read_boiler_data()
+                    self.warm_house()
+                except Exception as e:
+                    print(f"There is a problem Cap - {e}")
                 time.sleep(1)
 
         self.enable_heat(False)
@@ -231,10 +234,8 @@ class Moguchi:
             'burner_state': self.m_moguchi_data.burner_state if self.m_moguchi_data != None else None,
             'controller_connection': self.m_controller_connect_flag,
             'boiler_connection': True if self.m_moguchi_data != None else False,
-            'boiler_accepted_command': self.m_boiler_acceped_command_flag,
             'temp_sensor': True if self.m_temperature != None else False,
             'warm_house': self.m_warm_house_flag,
-            'target_flow_temperature': SETPOINT_FLOW,
             'heating_circuit_state': self.m_moguchi_data.heating_circuit_state if self.m_moguchi_data != None else None,
             'water_circuit_state': self.m_moguchi_data.water_circuit_state if self.m_moguchi_data != None else None
                 }
