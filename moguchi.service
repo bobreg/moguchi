@@ -1,0 +1,18 @@
+[Unit]
+Description=Django Gunicorn Daemon for Moguchi
+After=network.target
+
+[Service]
+User=bobreg
+Group=www-data
+WorkingDirectory=/home/bobreg/Documents/moguchi_web_server
+ExecStart=/home/bobreg/Documents/moguchi_web_server/.venv/bin/gunicorn \
+          --access-logfile - \
+          --workers 1 \
+          --worker-class gthread \
+          --threads 4 \
+          --bind 0.0.0.0:8000 \
+          moguchi.wsgi:application
+
+[Install]
+WantedBy=multi-user.target

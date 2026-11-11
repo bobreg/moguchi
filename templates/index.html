@@ -36,21 +36,35 @@
         </table>
 
         <p>Temperature = <span id="temperature_id">{{temperature}}</span></p>
+        <p>--------------------------------------------------</p>
         <p>Flow temperature = <span id="flow_temperature_id">{{flow_temperature}}</span></p>
         <p>Burner modulation = <span id="burner_modulation_id">{{burner_modulation}}</span></p>
-        <p>--------------------------------------------------</p>
         <p>Burner state = <span id="burner_state_id">{{burner_state}}</span></p>
         <p>Heating circuit state = <span id="heating_circuit_state_id">{{heating_circuit_state}}</span></p>
         <p>Water circuit state = <span id="water_circuit_state_id">{{water_circuit_state}}</span></p>
-
         <p>--------------------------------------------------</p>
-        <table>
+        <table border=1 cellpadding="8" cellspacing="0" style="text-align: center;">
+            <tr>
+                <td>Low Hysteresis<br>Level</td>
+                <td>Target<br>Temperature</td>
+                <td>High Hysteresis<br>Level</td>
+            </tr>
             <tr>
                 <td>
-                    <button>Connect to Boiler</button>
+                    <span>-</span>
+                    <input type="number" value="5" style="width: 30px;">
                 </td>
                 <td>
-                    <button>Set Temperature</button>
+                    <input type="number" value="20" style="width: 40px;">
+                </td>
+                <td>
+                    <span>+</span>
+                    <input type="number" value="2" style="width: 30px;">
+                </td>
+            </tr>
+            <tr>
+                <td colspan="3">
+                    <button style="width: 100%;">Set Target Temperature</button>
                 </td>
             </tr>
         </table>
