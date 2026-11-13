@@ -7,7 +7,9 @@ User=bobreg
 Group=www-data
 WorkingDirectory=/home/bobreg/Documents/moguchi_web_server
 ExecStart=/home/bobreg/Documents/moguchi_web_server/.venv/bin/gunicorn \
-          --access-logfile - \
+          --access-logfile /dev/null \
+          --disable-redirect-access-to-syslog \
+          --log-level warning \
           --workers 1 \
           --worker-class gthread \
           --threads 4 \
