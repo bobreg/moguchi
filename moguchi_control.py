@@ -33,6 +33,7 @@ class Moguchi:
         self.m_controller_connect_flag = False
         self.m_boiler_acceped_command_flag = False
         self.m_warm_house_flag = False
+        self.m_boiler_change_state_flag = False
         
         self.m_moguchi_data = None
         self.m_log = Moguchi_log()
@@ -60,6 +61,27 @@ class Moguchi:
         return temperature
 
 
+    def read_registers(self, addr: int, r_count: int, dev_id: int):
+        try:
+            rs485_data = self.controller.read_holding_registers(address=addr, count=r_count, device_id=dev_id)
+            if not rs485_data.isError():
+                return rs485_data
+            else:
+                self.m_log.msg_warn(f'Registers reading false!')
+        except Exception as e:
+            self.m_log.msg_error(f'Connection lost! - {e}')
+
+        return None
+
+
+    def write_register(self, val: int, addr: int, dev_id: int):
+        wr = self.controller.write_registers(address=addr, values=[val], device_id=dev_id)
+        if wr.isError():
+            self.m_log.msg_warn(f'Can\'t write register {addr}, data {val}!')
+            return False
+        return True
+
+
     def read_boiler_data(self):
         m_data = None
         try:
@@ -70,11 +92,18 @@ class Moguchi:
                     m_data = MoguchiData()
                     m_data.flow_temperature = boiler_regs[8] / 10.0
                     m_data.burner_modulation = boiler_regs[12]
-                    m_data.burner_state = (boiler_regs[13] & HEATING_CIRCUIT_STATE) == True
-                    m_data.heating_circuit_state = (boiler_regs[13] & HEATING_CIRCUIT_STATE) == True
-                    m_data.water_circuit_state = (boiler_regs[13] & WATER_CIRCUIT_STATE) == True
-        except:
-            pass
+                    m_data.burner_state = (boiler_regs[13] & HEATING_CIRCUIT_STATE) != 0
+                    m_data.heating_circuit_state = (boiler_regs[13] & HEATING_CIRCUIT_STATE) != 0
+                    m_data.water_circuit_state = (boiler_regs[13] & WATER_CIRCUIT_STATE) != 0
+
+                if self.m_boiler_change_state_flag == True:
+                    self.m_log.msg_info('Boiler is alive!')
+                    self.m_boiler_change_state_flag = False
+
+        except Exception as e:
+            if self.m_boiler_change_state_flag == False:
+                self.m_log.msg_info(f'Lost the boiler - {e}')
+                self.m_boiler_change_state_flag = True
 
         return copy.copy(m_data)
 
