@@ -5,6 +5,8 @@ After=network.target
 [Service]
 User=bobreg
 Group=www-data
+Restart=always
+RestartSec=5
 WorkingDirectory=/home/bobreg/Documents/moguchi_web_server
 ExecStart=/home/bobreg/Documents/moguchi_web_server/.venv/bin/gunicorn \
           --access-logfile /dev/null \

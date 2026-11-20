@@ -5,9 +5,11 @@
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Moguchi Control</title>
+        <link rel="stylesheet" href="{% static 'styles.css' %}?v=1.0">
     </head>
     <body>
         <h1>Moguchi Boiler Control</h1>
+        {% csrf_token %}
         <table>
             <tr>
                 <td>
@@ -25,25 +27,66 @@
                     <span id="boiler_connection_id">{{boiler_connection}}</span>
                 </td>
             </tr>
-            <tr>
-                <td>
-                    Warm house:
-                </td>
-                <td>
-                    <span id="warm_house_id">{{warm_house}}</span>
-                </td>
-            </tr>
         </table>
 
         <p>Temperature = <span id="temperature_id">{{temperature}}</span></p>
         <p>--------------------------------------------------</p>
+        <p>Target temperature = <span id="target_temperature_id">{{target_temperature}}</span></p>
         <p>Flow temperature = <span id="flow_temperature_id">{{flow_temperature}}</span></p>
         <p>Burner modulation = <span id="burner_modulation_id">{{burner_modulation}}</span></p>
         <p>Burner state = <span id="burner_state_id">{{burner_state}}</span></p>
         <p>Heating circuit state = <span id="heating_circuit_state_id">{{heating_circuit_state}}</span></p>
         <p>Water circuit state = <span id="water_circuit_state_id">{{water_circuit_state}}</span></p>
         <p>--------------------------------------------------</p>
-        <table border=1 cellpadding="8" cellspacing="0" style="text-align: center;">
+        <table border=1 cellpadding="8" cellspacing="0" style="text-align: center;" id="set_temp_table">
+            <tr>
+                <td>Target<br>Temperature</td>
+                <td>
+                    <input type="number" value="{{target_temperature}}" style="width: 40px;" id="target_temp_input">
+                </td>
+                <td>
+                    <button style="width: 100%;" id="set_temp_button">Set Target Temperature</button>
+                </td>
+            </tr>
+        </table>
+        <br>
+        <table border="1" cellpadding="8" cellspacing="0" style="text-align: center;">
+            <tr>
+                <td>Hot Water<br>Temperature</td>
+                <td>
+                    <input type="number" value="{{water_temp}}" style="width: 40px;" id="water_temp_input">
+                </td>
+                <td>
+                    <button style="width: 100%;" id="set_water_temp_button">Set Water Temp</button>
+                </td>
+            </tr>
+        </table>
+        <br>
+        <table border="1" cellpadding="8" cellspacing="0" style="text-align: center;">
+            <tr>
+                <td>Flow<br>Temperature</td>
+                <td>
+                    <input type="number" value="{{flow_setpoint}}" style="width: 40px;" id="flow_temp_input">
+                </td>
+                <td>
+                    <button style="width: 100%;" id="set_flow_temp_button">Set Flow Temp</button>
+                </td>
+            </tr>
+        </table>
+        <p>--------------------------------------------------</p>
+        <table>
+            <tr>
+                <td>
+                    <button class="normal_button" id="enable_heat_button">Enable Heat</button>
+                </td>
+                <td>
+                    <button class="normal_button" id="disable_heat_button">Disable Heat</button>
+                </td>
+            </tr>
+        </table>
+
+
+        <!-- <table border=1 cellpadding="8" cellspacing="0" style="text-align: center;">
             <tr>
                 <td>Low Hysteresis<br>Level</td>
                 <td>Target<br>Temperature</td>
@@ -67,7 +110,7 @@
                     <button style="width: 100%;">Set Target Temperature</button>
                 </td>
             </tr>
-        </table>
+        </table> -->
 
         <script src="{% static 'jquery.js' %}"></script>
         <script src="{% static 'scripts.js' %}?v=1.1"></script>
